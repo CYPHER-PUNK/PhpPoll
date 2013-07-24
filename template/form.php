@@ -36,6 +36,7 @@
         var currentQuestionNumber = $(lastInput).attr('id');
         var newInput = $('<br /><br /><input id="' + currentQuestionNumber + '" class="span3 added" name="Answer[' + currentQuestionNumber + '][][text]" type="text">');
         $(lastInput).after(newInput);
+        newInput.focus();
     }
 </script>
 <?php if ($saved) echo '<div class="alert in alert-block fade alert-success"><a href="#" class="close" data-dismiss="alert">×</a>Опрос сохранен.</div>';?>
@@ -44,7 +45,7 @@
     <div class="control-group <?php if ($poll->errorsText()) echo 'error';?>">
         <label class="control-label" for="Poll_<?=$poll->id;?>"><?=$poll->errorsText()?></label>
         <div class="controls">
-            <input id="Poll_<?=$poll->id;?>" type="text" class="span5" name="Poll[text]" placeholder="Название опроса" value="<?=$poll->text;?>">
+            <input autofocus="autofocus" id="Poll_<?=$poll->id;?>" type="text" class="span5" name="Poll[text]" placeholder="Название опроса" value="<?=$poll->text;?>">
         </div>
     </div>
     <div id="form">
