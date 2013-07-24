@@ -6,7 +6,7 @@
 ?>
 <h2><?=$poll->text?></h2>
 <div class="text-error"><?=$poll->errorsText()?></div>
-<form method="POST" class="form-horizontal">
+<form method="POST"<?=isset($_GET['sectional']) ? ' action="?action=result&id=' . $poll->id . '"' : ''?> class="form-horizontal">
     <input type="hidden" name="Poll[id]" value="<?=$poll->id?>">
     <ol>
 <?php foreach ($questions as $question) {

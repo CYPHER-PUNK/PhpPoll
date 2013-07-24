@@ -253,8 +253,12 @@ class Controller {
     {
 
         $poll   = new Poll(false);
-        $result = Db::getInstance()->query('SELECT * FROM ' . $poll->table . ' WHERE status=' . Poll::STATUS_ACTIVE)->fetch_object();
-        $poll->setAttributes((array)$result);
+        if ($_GET['sectional'] && isset($_GET['id'])) {
+            $poll->id = intval($_GET['id']);
+        } else {
+            $result = Db::getInstance()->query('SELECT * FROM ' . $poll->table . ' WHERE status=' . Poll::STATUS_ACTIVE)->fetch_object();
+            $poll->setAttributes((array)$result);
+        }
         /** @var Question[] $questions */
         $questions = array();
         $answers = array();
@@ -333,6 +337,38 @@ SQL;
         $result = Db::getInstance()->query('SELECT * FROM ' . $poll->table . ' WHERE id=' . $poll->id)->fetch_object();
         $poll->setAttributes((array)$result);
 
+        //print_r($_POST['AnswerUser']);
+
+        if (isset($_POST['AnswerUser']) && is_array($_POST['AnswerUser'])) {
+            $sections = array();
+            foreach ($_POST['AnswerUser'] as $questionId => $answerUsers) {
+                $answerIds = array();
+                foreach ($answerUsers as $answerUser) {
+                    //$answerIds[$questionId] = $answerUser['answer_id'];
+                    $answerIds[] = $answerUser['answer_id'];
+                    $sections[$questionId][] = $answerUser['answer_id'];
+                }
+                $result = Db::getInstance()->query('SELECT user_id FROM ' . AnswerUser::model()->table . ' WHERE answer_id IN (' . implode(',', $answerIds) . ')');
+                while ($row = $result->fetch_object()) {
+                    $userIdsAll[$questionId][] = $row->user_id;
+                }
+            }
+
+            if (isset($userIdsAll)) {//для резальтатов опроса в разрезе
+                $userIds = reset($userIdsAll);
+                foreach ($userIdsAll as $questionId => $_userIds) {
+                    $userIds = array_intersect($userIds, $_userIds);
+                }
+            }
+
+            /*if (count($answerIds)) {
+                $result = Db::getInstance()->query('SELECT user_id FROM ' . AnswerUser::model()->table . ' WHERE answer_id IN (' . implode(',', $answerIds) . ')');
+                while ($row = $result->fetch_object()) {
+                    $userIds[] = $row->user_id;
+                }
+            }*/
+        }
+
         /** @var Question[] $questions */
         $questions = array();
         $answers = array();
@@ -345,6 +381,21 @@ SQL;
         while ($question = $result->fetch_object()) {
             $questions[$question->id] = new Question(false);
             $questions[$question->id]->setAttributes((array)$question);
+            //в назрезе
+            /*if (isset($_POST['AnswerUser'][$question->id]) && is_array($_POST['AnswerUser'][$question->id])) {
+                $answerIds = array();
+                $sections = array();
+                foreach ($_POST['AnswerUser'][$question->id] as $answerUser) {
+                    $answerIds[$question->id][] = $answerUser['answer_id'];
+                    $sections[$question->id][] = $answerUser['answer_id'];
+                }
+                if (count($answerIds)) {
+                    $result = Db::getInstance()->query('SELECT user_id FROM ' . AnswerUser::model()->table . ' WHERE answer_id IN (' . implode(',', $answerIds) . ')');
+                    while ($row = $result->fetch_object()) {
+                        $userIds[] = $row->user_id;
+                    }
+                }
+            }*/
 
             $query2 = <<<SQL
 SELECT answer.*
@@ -358,7 +409,9 @@ SQL;
                 $answers[$question->id][$answer->id]->setAttributes((array)$answer);
                 $ids[] = $answer->id;
             }
-            $result3 = Db::getInstance()->query('SELECT * FROM ' . AnswerUser::model()->table . ' WHERE answer_id IN('. implode(',', $ids) .')');
+            $whereUser = isset($userIds) && count($userIds) ? ' AND user_id IN(' . implode(',', $userIds) . ')' : '';
+            //echo 'SELECT * FROM ' . AnswerUser::model()->table . ' WHERE answer_id IN('. implode(',', $ids) . ')' . $whereUser;
+            $result3 = Db::getInstance()->query('SELECT * FROM ' . AnswerUser::model()->table . ' WHERE answer_id IN('. implode(',', $ids) . ')' . $whereUser);
             $maxCount = 0;
             while ($answerUser = $result3->fetch_object()) {
                 $maxCount = ++$answers[$question->id][$answerUser->answer_id]->count;
@@ -368,7 +421,7 @@ SQL;
             }
         }
 
-        $this->render('result', array('poll' => $poll, 'questions' => $questions, 'answers' => $answers));
+        $this->render('result', array('poll' => $poll, 'questions' => $questions, 'answers' => $answers, 'sections' => isset($sections) ? $sections : array(), 'error' => (isset($userIds) && !count($userIds))));
     }
 
     private function render($file, $data = null)

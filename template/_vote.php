@@ -5,7 +5,7 @@
  * @var AnswerUser $answerUser
  */
 $checked = array();
-$type = $question->is_multiple ? 'checkbox' : 'radio';
+$type = $question->is_multiple || isset($_GET['sectional']) ? 'checkbox' : 'radio';
 ?>
 <div class="text-error"><?=$question->errorsText()?></div>
 <li>
